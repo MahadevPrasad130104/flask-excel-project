@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Benefit Entry</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="container">
+    <h2>Benefit Entry</h2>
+
+    <form method="post" action="/check_benefit">
+
+        <label>Phone Number</label>
+        <input type="text" name="phone" required>
+
+        <label>Card Code</label>
+        <input type="text" name="card_code" value="{{ card_code }}" readonly>
+
+        <label>Benefit Code</label>
+        <input type="text" name="benefit_code" required>
+
+        <button>Submit</button>
+    </form>
+
+    <a href="/view_benefits" target="_blank">
+        <button class="secondary-btn">View Benefit Schemes</button>
+    </a>
+</div>
+
+</body>
+</html>
