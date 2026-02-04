@@ -120,9 +120,17 @@ def view_benefits():
 
     df = pd.read_excel('KBF26BENEFITSCHEME.xlsx', engine='openpyxl')
     return df.to_html(index=False)
+@app.route('/view_submitted')
+def view_submitted():
+    import os
+    if not os.path.exists('submitted_data.xlsx'):
+        return "No data found"
 
+    df = pd.read_excel('submitted_data.xlsx', engine='openpyxl')
+    return df.to_html(index=False)
 
 # ---------------- RUN APP ----------------
 if __name__ == '__main__':
     app.run()
+
 
