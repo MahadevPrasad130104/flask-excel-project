@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Customer Details</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="container">
+    <h2>Customer Details</h2>
+
+    {% for key, value in customer.items() %}
+        <label>{{ key | upper }}</label>
+        <input value="{{ value }}" readonly>
+    {% endfor %}
+
+    <form action="/benefit_form" method="post">
+        <input type="hidden" name="card_code" value="{{ customer['card code'] }}">
+        <button>Proceed to Benefit Form</button>
+    </form>
+</div>
+
+</body>
+</html>
