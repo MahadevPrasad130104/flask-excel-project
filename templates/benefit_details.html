@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Final Submission</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="table-box">
+    <h2 class="success">Submission Successful ✔</h2>
+
+    <p><b>Phone:</b> {{ phone }}</p>
+    <p><b>Card Code:</b> {{ card_code }}</p>
+
+    <table>
+        {% for key, value in benefit.items() %}
+        <tr>
+            <th>{{ key }}</th>
+            <td>{{ value }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <br>
+    <a href="/"><button>Go Home</button></a>
+</div>
+
+</body>
+</html>
