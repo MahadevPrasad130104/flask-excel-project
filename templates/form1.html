@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Customer Verification</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="container">
+    <h2>Customer Verification</h2>
+
+    <form method="post" action="/check_customer">
+        <label>Card Code</label>
+        <input type="text" name="card_code" required>
+
+        <button>Verify Customer</button>
+    </form>
+</div>
+
+</body>
+</html>
