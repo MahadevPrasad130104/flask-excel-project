@@ -39,14 +39,20 @@ def create_table():
     """)
 
     # Benefit master table (KBF26BENEFITSCHEME)
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS benefits (
-            id SERIAL PRIMARY KEY,
-            benefit_code VARCHAR(50) UNIQUE,
-            benefit_name VARCHAR(100),
-            description TEXT
-        );
-    """)
+   # Benefit master table (KBF26BENEFITSCHEME)
+cur.execute("""
+    CREATE TABLE IF NOT EXISTS benefits (
+        id SERIAL PRIMARY KEY,
+        benefit_code VARCHAR(50) UNIQUE,
+        vessel_type VARCHAR(100),
+        vessel_description TEXT,
+        vessel_weight VARCHAR(50),
+        mutton VARCHAR(50),
+        chicken VARCHAR(50),
+        egg_dozen VARCHAR(50)
+    );
+""")
+
 
     conn.commit()
     cur.close()
@@ -115,11 +121,18 @@ def check_benefit():
     cur = conn.cursor()
 
     # Check if benefit exists
-    cur.execute("""
-        SELECT benefit_code, benefit_name, description
-        FROM benefits
-        WHERE benefit_code = %s
-    """, (benefit_code,))
+  cur.execute("""
+    SELECT benefit_code,
+           vessel_type,
+           vessel_description,
+           vessel_weight,
+           mutton,
+           chicken,
+           egg_dozen
+    FROM benefits
+    WHERE benefit_code = %s
+""", (benefit_code,))
+
 
     benefit = cur.fetchone()
 
@@ -138,11 +151,16 @@ def check_benefit():
     cur.close()
     conn.close()
 
-    benefit_data = {
-        "benefit code": benefit[0],
-        "benefit name": benefit[1],
-        "description": benefit[2]
-    }
+   benefit_data = {
+    "benefit code": benefit[0],
+    "vessel type": benefit[1],
+    "vessel description": benefit[2],
+    "vessel weight": benefit[3],
+    "mutton": benefit[4],
+    "chicken": benefit[5],
+    "egg (in dozen)": benefit[6]
+}
+
 
     return render_template(
         'benefit_details.html',
@@ -215,14 +233,27 @@ def load_master_data():
 
         for _, row in df2.iterrows():
             cur.execute("""
-                INSERT INTO benefits (benefit_code, benefit_name, description)
-                VALUES (%s, %s, %s)
-                ON CONFLICT (benefit_code) DO NOTHING;
-            """, (
-                str(row['benefit code']),
-                str(row.get('benefit name', '')),
-                str(row.get('description', ''))
-            ))
+    INSERT INTO benefits (
+        benefit_code,
+        vessel_type,
+        vessel_description,
+        vessel_weight,
+        mutton,
+        chicken,
+        egg_dozen
+    )
+    VALUES (%s, %s, %s, %s, %s, %s, %s)
+    ON CONFLICT (benefit_code) DO NOTHING;
+""", (
+    str(row['benefit code']),
+    str(row.get('vessel type', '')),
+    str(row.get('vessel description', '')),
+    str(row.get('vessel weight', '')),
+    str(row.get('mutton', '')),
+    str(row.get('chicken', '')),
+    str(row.get('egg (in dozen)', ''))
+))
+
 
     conn.commit()
     cur.close()
@@ -232,6 +263,7 @@ def load_master_data():
 
 if __name__ == '__main__':
     app.run()
+
 
 
 
