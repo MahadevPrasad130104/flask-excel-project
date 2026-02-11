@@ -171,8 +171,52 @@ def view_submitted():
     return html
 
 # ---------------- RUN ----------------
+@app.route('/load_master_data')
+def load_master_data():
+    conn = get_connection()
+    cur = conn.cursor()
+
+    # Load customers from Excel
+    if os.path.exists('KBF1JJ.xlsx'):
+        df = pd.read_excel('KBF1JJ.xlsx', engine='openpyxl')
+        df.columns = df.columns.str.strip().str.lower()
+
+        for _, row in df.iterrows():
+            cur.execute("""
+                INSERT INTO customers (card_code, name, amount_paid, status)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (card_code) DO NOTHING;
+            """, (
+                str(row['card code']),
+                str(row['name']),
+                str(row['amount paid']),
+                str(row['status'])
+            ))
+
+    # Load benefits from Excel
+    if os.path.exists('KBF26BENEFITSCHEME.xlsx'):
+        df2 = pd.read_excel('KBF26BENEFITSCHEME.xlsx', engine='openpyxl')
+        df2.columns = df2.columns.str.strip().str.lower()
+
+        for _, row in df2.iterrows():
+            cur.execute("""
+                INSERT INTO benefits (benefit_code, benefit_name, description)
+                VALUES (%s, %s, %s)
+                ON CONFLICT (benefit_code) DO NOTHING;
+            """, (
+                str(row['benefit code']),
+                str(row.get('benefit name', '')),
+                str(row.get('description', ''))
+            ))
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return "Master data loaded successfully!"
 
 if __name__ == '__main__':
     app.run()
+
 
 
