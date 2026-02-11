@@ -1,6 +1,15 @@
 from flask import Flask, render_template, request
 import pandas as pd
 import os
+import psycopg2
+import os
+
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
+def get_connection():
+    conn = psycopg2.connect(DATABASE_URL)
+    return conn
+
 
 app = Flask(__name__)
 
@@ -128,9 +137,29 @@ def view_submitted():
 
     df = pd.read_excel('submitted_data.xlsx', engine='openpyxl')
     return df.to_html(index=False)
+def create_table():
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS submitted_data (
+            id SERIAL PRIMARY KEY,
+            phone VARCHAR(20),
+            card_code VARCHAR(50),
+            benefit_code VARCHAR(50)
+        );
+    """)
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+create_table()
+ 
 
 # ---------------- RUN APP ----------------
 if __name__ == '__main__':
     app.run()
+
 
 
