@@ -260,9 +260,22 @@ def load_master_data():
     conn.close()
 
     return "Master data loaded successfully!"
+@app.route('/drop_benefits')
+def drop_benefits():
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute("DROP TABLE IF EXISTS benefits;")
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return "Benefits table dropped successfully!"
 
 if __name__ == '__main__':
     app.run()
+
 
 
 
