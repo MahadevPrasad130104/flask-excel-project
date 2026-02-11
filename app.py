@@ -62,30 +62,39 @@ def home():
     return render_template('form1.html')
 
 # ---------------- CUSTOMER VERIFICATION ----------------
-
 @app.route('/check_customer', methods=['POST'])
 def check_customer():
     card_code = request.form['card_code'].strip()
 
-    if not os.path.exists('KBF1JJ.xlsx'):
-        return "<h3>KBF1JJ.xlsx file not found</h3>"
+    conn = get_connection()
+    cur = conn.cursor()
 
-    df = pd.read_excel('KBF1JJ.xlsx', engine='openpyxl')
-    df.columns = df.columns.str.strip().str.lower()
+    cur.execute("""
+        SELECT card_code, name, amount_paid, status
+        FROM customers
+        WHERE card_code = %s
+    """, (card_code,))
 
-    if 'card code' not in df.columns:
-        return "<h3>'card code' column missing</h3>"
+    customer = cur.fetchone()
 
-    df['card code'] = df['card code'].astype(str).str.strip()
-    customer = df[df['card code'] == card_code]
+    cur.close()
+    conn.close()
 
-    if customer.empty:
+    if not customer:
         return "<h3 style='color:red'>Customer doesn't exist</h3><a href='/'>Go Back</a>"
+
+    customer_data = {
+        "card code": customer[0],
+        "name": customer[1],
+        "amount paid": customer[2],
+        "status": customer[3]
+    }
 
     return render_template(
         'customer_details.html',
-        customer=customer.iloc[0].to_dict()
+        customer=customer_data
     )
+
 
 # ---------------- BENEFIT FORM ----------------
 
@@ -217,6 +226,7 @@ def load_master_data():
 
 if __name__ == '__main__':
     app.run()
+
 
 
 
