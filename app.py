@@ -10,7 +10,8 @@ app = Flask(__name__)
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 def get_connection():
-    return psycopg2.connect(DATABASE_URL)
+    return psycopg2.connect(DATABASE_URL, sslmode='require')
+
 
 def create_table():
     conn = get_connection()
@@ -150,3 +151,4 @@ def view_submitted():
 
 if __name__ == '__main__':
     app.run()
+
