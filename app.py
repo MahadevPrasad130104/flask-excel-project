@@ -111,25 +111,24 @@ def check_benefit():
     card_code = request.form['card_code'].strip()
     benefit_code = request.form['benefit_code'].strip()
 
-    if not os.path.exists('KBF26BENEFITSCHEME.xlsx'):
-        return "<h3>Benefit scheme file not found</h3>"
-
-    df = pd.read_excel('KBF26BENEFITSCHEME.xlsx', engine='openpyxl')
-    df.columns = df.columns.str.strip().str.lower()
-
-    if 'benefit code' not in df.columns:
-        return "<h3>'benefit code' column missing</h3>"
-
-    df['benefit code'] = df['benefit code'].astype(str).str.strip()
-    benefit = df[df['benefit code'] == benefit_code]
-
-    if benefit.empty:
-        return "<h3 style='color:red'>Invalid Benefit Code</h3><a href='/'>Go Home</a>"
-
-    # SAVE TO DATABASE
     conn = get_connection()
     cur = conn.cursor()
 
+    # Check if benefit exists
+    cur.execute("""
+        SELECT benefit_code, benefit_name, description
+        FROM benefits
+        WHERE benefit_code = %s
+    """, (benefit_code,))
+
+    benefit = cur.fetchone()
+
+    if not benefit:
+        cur.close()
+        conn.close()
+        return "<h3 style='color:red'>Invalid Benefit Code</h3><a href='/'>Go Home</a>"
+
+    # Save submission
     cur.execute("""
         INSERT INTO submitted_data (phone, card_code, benefit_code)
         VALUES (%s, %s, %s)
@@ -139,12 +138,19 @@ def check_benefit():
     cur.close()
     conn.close()
 
+    benefit_data = {
+        "benefit code": benefit[0],
+        "benefit name": benefit[1],
+        "description": benefit[2]
+    }
+
     return render_template(
         'benefit_details.html',
         phone=phone,
         card_code=card_code,
-        benefit=benefit.iloc[0].to_dict()
+        benefit=benefit_data
     )
+
 
 # ---------------- VIEW BENEFIT SCHEMES ----------------
 
@@ -226,6 +232,7 @@ def load_master_data():
 
 if __name__ == '__main__':
     app.run()
+
 
 
 
