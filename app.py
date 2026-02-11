@@ -17,6 +17,7 @@ def create_table():
     conn = get_connection()
     cur = conn.cursor()
 
+    # Submitted data table
     cur.execute("""
         CREATE TABLE IF NOT EXISTS submitted_data (
             id SERIAL PRIMARY KEY,
@@ -26,9 +27,31 @@ def create_table():
         );
     """)
 
+    # Customer master table (KBF1JJ)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS customers (
+            id SERIAL PRIMARY KEY,
+            card_code VARCHAR(50) UNIQUE,
+            name VARCHAR(100),
+            amount_paid VARCHAR(50),
+            status VARCHAR(50)
+        );
+    """)
+
+    # Benefit master table (KBF26BENEFITSCHEME)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS benefits (
+            id SERIAL PRIMARY KEY,
+            benefit_code VARCHAR(50) UNIQUE,
+            benefit_name VARCHAR(100),
+            description TEXT
+        );
+    """)
+
     conn.commit()
     cur.close()
     conn.close()
+
 
 create_table()
 
@@ -151,4 +174,5 @@ def view_submitted():
 
 if __name__ == '__main__':
     app.run()
+
 
