@@ -17,15 +17,28 @@
         <label>Card Code</label>
         <input type="text" name="card_code" value="{{ card_code }}" readonly>
 
-        <label>Benefit Code</label>
-        <input type="text" name="benefit_code" required>
+        <label>Select Benefit</label>
+        <select name="benefit_code" required>
+            {% if benefits %}
+                {% for benefit in benefits %}
+                    <option value="{{ benefit[0] }}">
+                        {{ benefit[0] }} - {{ benefit[1] }}
+                    </option>
+                {% endfor %}
+            {% else %}
+                <option disabled>No eligible benefits available</option>
+            {% endif %}
+        </select>
 
-        <button>Submit</button>
+        <button type="submit">Submit</button>
     </form>
 
+    <br>
+
     <a href="/view_benefits" target="_blank">
-        <button class="secondary-btn">View Benefit Schemes</button>
+        <button type="button" class="secondary-btn">View Benefit Schemes</button>
     </a>
+
 </div>
 
 </body>
