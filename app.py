@@ -54,9 +54,9 @@ cur.execute("""
 """)
 
 
-    conn.commit()
-    cur.close()
-    conn.close()
+ conn.commit()
+ cur.close()
+ conn.close()
 
 
 create_table()
@@ -275,6 +275,7 @@ def drop_benefits():
 
 if __name__ == '__main__':
     app.run()
+
 
 
 
