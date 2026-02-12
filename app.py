@@ -17,7 +17,6 @@ def create_table():
     conn = get_connection()
     cur = conn.cursor()
 
-    # Submitted data table
     cur.execute("""
         CREATE TABLE IF NOT EXISTS submitted_data (
             id SERIAL PRIMARY KEY,
@@ -27,7 +26,6 @@ def create_table():
         );
     """)
 
-    # Customer table
     cur.execute("""
         CREATE TABLE IF NOT EXISTS customers (
             id SERIAL PRIMARY KEY,
@@ -38,7 +36,6 @@ def create_table():
         );
     """)
 
-    # Benefits table
     cur.execute("""
         CREATE TABLE IF NOT EXISTS benefits (
             id SERIAL PRIMARY KEY,
@@ -66,7 +63,7 @@ def home():
     return render_template('form1.html')
 
 
-# ---------------- CUSTOMER VERIFICATION ----------------
+# ---------------- CUSTOMER CHECK ----------------
 
 @app.route('/check_customer', methods=['POST'])
 def check_customer():
@@ -137,7 +134,6 @@ def check_benefit():
         conn.close()
         return "<h3 style='color:red'>Invalid Benefit Code</h3><a href='/'>Go Home</a>"
 
-    # Save submission
     cur.execute("""
         INSERT INTO submitted_data (phone, card_code, benefit_code)
         VALUES (%s, %s, %s)
@@ -165,7 +161,7 @@ def check_benefit():
     )
 
 
-# ---------------- VIEW SUBMITTED (DELETE ONLY) ----------------
+# ---------------- VIEW SUBMITTED (PROFESSIONAL UI) ----------------
 
 @app.route('/view_submitted')
 def view_submitted():
@@ -183,40 +179,70 @@ def view_submitted():
     cur.close()
     conn.close()
 
-    if not rows:
-        return "No submissions yet."
-
     html = """
-    <h2>Submitted Records</h2>
-    <table border='1' cellpadding='8'>
-    <tr>
-        <th>Phone</th>
-        <th>Card Code</th>
-        <th>Benefit Code</th>
-        <th>Delete</th>
-    </tr>
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Submitted Records</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    </head>
+    <body class="bg-light">
+
+    <div class="container mt-5">
+        <div class="card shadow-lg">
+            <div class="card-header bg-dark text-white">
+                <h4 class="mb-0">Submitted Records</h4>
+            </div>
+            <div class="card-body">
     """
 
-    for row in rows:
-        html += f"""
-        <tr>
-            <td>{row[1]}</td>
-            <td>{row[2]}</td>
-            <td>{row[3]}</td>
-            <td>
-                <a href="/delete/{row[0]}" 
-                   onclick="return confirm('Are you sure you want to delete this record?')">
-                   Delete
-                </a>
-            </td>
-        </tr>
+    if not rows:
+        html += "<div class='alert alert-info'>No submissions yet.</div>"
+    else:
+        html += """
+        <table class="table table-bordered table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Phone</th>
+                    <th>Card Code</th>
+                    <th>Benefit Code</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
         """
 
-    html += "</table>"
+        for row in rows:
+            html += f"""
+            <tr>
+                <td>{row[1]}</td>
+                <td>{row[2]}</td>
+                <td>{row[3]}</td>
+                <td>
+                    <a href="/delete/{row[0]}" 
+                       class="btn btn-danger btn-sm"
+                       onclick="return confirm('Are you sure you want to delete this record?')">
+                       Delete
+                    </a>
+                </td>
+            </tr>
+            """
+
+        html += "</tbody></table>"
+
+    html += """
+            </div>
+        </div>
+    </div>
+
+    </body>
+    </html>
+    """
+
     return html
 
 
-# ---------------- DELETE ROUTE ----------------
+# ---------------- DELETE ----------------
 
 @app.route('/delete/<int:id>')
 def delete_record(id):
@@ -232,48 +258,7 @@ def delete_record(id):
     return redirect('/view_submitted')
 
 
-# ---------------- LOAD MASTER DATA ----------------
-
-@app.route('/load_master_data')
-def load_master_data():
-    conn = get_connection()
-    cur = conn.cursor()
-
-    if os.path.exists('KBF26BENEFITSCHEME.xlsx'):
-        df = pd.read_excel('KBF26BENEFITSCHEME.xlsx', engine='openpyxl')
-        df.columns = df.columns.str.strip().str.lower()
-
-        for _, row in df.iterrows():
-            cur.execute("""
-                INSERT INTO benefits (
-                    benefit_code,
-                    vessel_type,
-                    vessel_description,
-                    vessel_weight,
-                    mutton,
-                    chicken,
-                    egg_dozen
-                )
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (benefit_code) DO NOTHING;
-            """, (
-                str(row['benefit code']),
-                str(row.get('vessel type', '')),
-                str(row.get('vessel description', '')),
-                str(row.get('vessel weight', '')),
-                str(row.get('mutton', '')),
-                str(row.get('chicken', '')),
-                str(row.get('egg (in dozen)', ''))
-            ))
-
-    conn.commit()
-    cur.close()
-    conn.close()
-
-    return "Master data loaded successfully!"
-
-
-# ---------------- VIEW BENEFITS ----------------
+# ---------------- VIEW BENEFITS (PROFESSIONAL UI) ----------------
 
 @app.route('/view_benefits')
 def view_benefits():
@@ -297,36 +282,66 @@ def view_benefits():
     cur.close()
     conn.close()
 
-    if not rows:
-        return "No benefits found in database"
+    html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Benefits Master</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    </head>
+    <body class="bg-light">
 
-    html = "<h2>Benefits Master Data</h2><table border='1'>"
-    html += """
-    <tr>
-        <th>Benefit Code</th>
-        <th>Vessel Type</th>
-        <th>Vessel Description</th>
-        <th>Vessel Weight</th>
-        <th>Mutton</th>
-        <th>Chicken</th>
-        <th>Egg (in dozen)</th>
-    </tr>
+    <div class="container mt-5">
+        <div class="card shadow-lg">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Benefits Master Data</h4>
+            </div>
+            <div class="card-body">
     """
 
-    for row in rows:
-        html += f"""
-        <tr>
-            <td>{row[0]}</td>
-            <td>{row[1]}</td>
-            <td>{row[2]}</td>
-            <td>{row[3]}</td>
-            <td>{row[4]}</td>
-            <td>{row[5]}</td>
-            <td>{row[6]}</td>
-        </tr>
+    if not rows:
+        html += "<div class='alert alert-warning'>No benefits found.</div>"
+    else:
+        html += """
+        <table class="table table-striped table-bordered">
+            <thead class="table-dark">
+                <tr>
+                    <th>Benefit Code</th>
+                    <th>Vessel Type</th>
+                    <th>Description</th>
+                    <th>Weight</th>
+                    <th>Mutton</th>
+                    <th>Chicken</th>
+                    <th>Egg (Dozen)</th>
+                </tr>
+            </thead>
+            <tbody>
         """
 
-    html += "</table>"
+        for row in rows:
+            html += f"""
+            <tr>
+                <td>{row[0]}</td>
+                <td>{row[1]}</td>
+                <td>{row[2]}</td>
+                <td>{row[3]}</td>
+                <td>{row[4]}</td>
+                <td>{row[5]}</td>
+                <td>{row[6]}</td>
+            </tr>
+            """
+
+        html += "</tbody></table>"
+
+    html += """
+            </div>
+        </div>
+    </div>
+
+    </body>
+    </html>
+    """
+
     return html
 
 
