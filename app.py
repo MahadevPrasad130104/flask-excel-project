@@ -13,10 +13,13 @@ def get_connection():
     return psycopg2.connect(DATABASE_URL, sslmode='require')
 
 
+# ---------------- CREATE TABLES ----------------
+
 def create_table():
     conn = get_connection()
     cur = conn.cursor()
 
+    # Submitted Data
     cur.execute("""
         CREATE TABLE IF NOT EXISTS submitted_data (
             id SERIAL PRIMARY KEY,
@@ -26,16 +29,18 @@ def create_table():
         );
     """)
 
+    # Customers
     cur.execute("""
         CREATE TABLE IF NOT EXISTS customers (
             id SERIAL PRIMARY KEY,
             card_code VARCHAR(50) UNIQUE,
             name VARCHAR(100),
-            amount_paid VARCHAR(50),
+            amount_paid INTEGER,
             status VARCHAR(50)
         );
     """)
 
+    # Benefits
     cur.execute("""
         CREATE TABLE IF NOT EXISTS benefits (
             id SERIAL PRIMARY KEY,
@@ -96,12 +101,55 @@ def check_customer():
     return render_template('customer_details.html', customer=customer_data)
 
 
-# ---------------- BENEFIT FORM ----------------
+# ---------------- BENEFIT FORM (PREFIX FILTER) ----------------
 
 @app.route('/benefit_form', methods=['POST'])
 def benefit_form():
     card_code = request.form['card_code']
-    return render_template('benefit_form.html', card_code=card_code)
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute("SELECT amount_paid FROM customers WHERE card_code = %s", (card_code,))
+    customer = cur.fetchone()
+
+    if not customer:
+        cur.close()
+        conn.close()
+        return "Customer not found"
+
+    amount_paid = int(customer[0])
+
+    if amount_paid == 1000:
+        prefix = "261k"
+    elif amount_paid == 2000:
+        prefix = "262k"
+    elif amount_paid == 3000:
+        prefix = "263k"
+    elif amount_paid == 4000:
+        prefix = "264k"
+    else:
+        cur.close()
+        conn.close()
+        return "Invalid payment amount"
+
+    cur.execute("""
+        SELECT benefit_code, vessel_type
+        FROM benefits
+        WHERE benefit_code LIKE %s
+        ORDER BY benefit_code ASC;
+    """, (prefix + "%",))
+
+    benefits = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return render_template(
+        'benefit_form.html',
+        card_code=card_code,
+        benefits=benefits
+    )
 
 
 # ---------------- CHECK BENEFIT ----------------
@@ -161,7 +209,7 @@ def check_benefit():
     )
 
 
-# ---------------- VIEW SUBMITTED (PROFESSIONAL UI) ----------------
+# ---------------- VIEW SUBMITTED ----------------
 
 @app.route('/view_submitted')
 def view_submitted():
@@ -187,11 +235,10 @@ def view_submitted():
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     </head>
     <body class="bg-light">
-
     <div class="container mt-5">
         <div class="card shadow-lg">
             <div class="card-header bg-dark text-white">
-                <h4 class="mb-0">Submitted Records</h4>
+                <h4>Submitted Records</h4>
             </div>
             <div class="card-body">
     """
@@ -201,15 +248,14 @@ def view_submitted():
     else:
         html += """
         <table class="table table-bordered table-hover">
-            <thead class="table-dark">
-                <tr>
-                    <th>Phone</th>
-                    <th>Card Code</th>
-                    <th>Benefit Code</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
+        <thead class="table-dark">
+        <tr>
+            <th>Phone</th>
+            <th>Card Code</th>
+            <th>Benefit Code</th>
+            <th>Delete</th>
+        </tr>
+        </thead><tbody>
         """
 
         for row in rows:
@@ -221,7 +267,7 @@ def view_submitted():
                 <td>
                     <a href="/delete/{row[0]}" 
                        class="btn btn-danger btn-sm"
-                       onclick="return confirm('Are you sure you want to delete this record?')">
+                       onclick="return confirm('Are you sure?')">
                        Delete
                     </a>
                 </td>
@@ -230,14 +276,7 @@ def view_submitted():
 
         html += "</tbody></table>"
 
-    html += """
-            </div>
-        </div>
-    </div>
-
-    </body>
-    </html>
-    """
+    html += "</div></div></div></body></html>"
 
     return html
 
@@ -248,17 +287,86 @@ def view_submitted():
 def delete_record(id):
     conn = get_connection()
     cur = conn.cursor()
-
     cur.execute("DELETE FROM submitted_data WHERE id = %s;", (id,))
     conn.commit()
-
     cur.close()
     conn.close()
-
     return redirect('/view_submitted')
 
 
-# ---------------- VIEW BENEFITS (PROFESSIONAL UI) ----------------
+# ---------------- LOAD MASTER DATA ----------------
+
+@app.route('/load_master_data')
+def load_master_data():
+    conn = get_connection()
+    cur = conn.cursor()
+
+    # Load Customers
+    if os.path.exists('KBF1JJ.xlsx'):
+        df = pd.read_excel('KBF1JJ.xlsx', engine='openpyxl')
+        df.columns = df.columns.str.strip().str.lower()
+
+        for _, row in df.iterrows():
+            cur.execute("""
+                INSERT INTO customers (card_code, name, amount_paid, status)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (card_code) DO NOTHING;
+            """, (
+                str(row['card code']),
+                str(row['name']),
+                int(row['amount paid']),
+                str(row['status'])
+            ))
+
+    # Load Benefits
+    if os.path.exists('KBF26BENEFITSCHEME.xlsx'):
+        df2 = pd.read_excel('KBF26BENEFITSCHEME.xlsx', engine='openpyxl')
+        df2.columns = df2.columns.str.strip().str.lower()
+
+        for _, row in df2.iterrows():
+            cur.execute("""
+                INSERT INTO benefits (
+                    benefit_code,
+                    vessel_type,
+                    vessel_description,
+                    vessel_weight,
+                    mutton,
+                    chicken,
+                    egg_dozen
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (benefit_code) DO NOTHING;
+            """, (
+                str(row['benefit code']),
+                str(row.get('vessel type', '')),
+                str(row.get('vessel description', '')),
+                str(row.get('vessel weight', '')),
+                str(row.get('mutton', '')),
+                str(row.get('chicken', '')),
+                str(row.get('egg (in dozen)', ''))
+            ))
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return "Master data loaded successfully!"
+
+
+# ---------------- DROP BENEFITS ----------------
+
+@app.route('/drop_benefits')
+def drop_benefits():
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("DROP TABLE IF EXISTS benefits;")
+    conn.commit()
+    cur.close()
+    conn.close()
+    return "Benefits table dropped successfully!"
+
+
+# ---------------- VIEW BENEFITS ----------------
 
 @app.route('/view_benefits')
 def view_benefits():
@@ -278,70 +386,39 @@ def view_benefits():
     """)
 
     rows = cur.fetchall()
-
     cur.close()
     conn.close()
 
-    html = """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Benefits Master</title>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    </head>
-    <body class="bg-light">
+    if not rows:
+        return "No benefits found"
 
-    <div class="container mt-5">
-        <div class="card shadow-lg">
-            <div class="card-header bg-primary text-white">
-                <h4 class="mb-0">Benefits Master Data</h4>
-            </div>
-            <div class="card-body">
+    html = "<h2>Benefits Master Data</h2><table border='1'>"
+    html += """
+    <tr>
+        <th>Benefit Code</th>
+        <th>Vessel Type</th>
+        <th>Description</th>
+        <th>Weight</th>
+        <th>Mutton</th>
+        <th>Chicken</th>
+        <th>Egg</th>
+    </tr>
     """
 
-    if not rows:
-        html += "<div class='alert alert-warning'>No benefits found.</div>"
-    else:
-        html += """
-        <table class="table table-striped table-bordered">
-            <thead class="table-dark">
-                <tr>
-                    <th>Benefit Code</th>
-                    <th>Vessel Type</th>
-                    <th>Description</th>
-                    <th>Weight</th>
-                    <th>Mutton</th>
-                    <th>Chicken</th>
-                    <th>Egg (Dozen)</th>
-                </tr>
-            </thead>
-            <tbody>
+    for row in rows:
+        html += f"""
+        <tr>
+            <td>{row[0]}</td>
+            <td>{row[1]}</td>
+            <td>{row[2]}</td>
+            <td>{row[3]}</td>
+            <td>{row[4]}</td>
+            <td>{row[5]}</td>
+            <td>{row[6]}</td>
+        </tr>
         """
 
-        for row in rows:
-            html += f"""
-            <tr>
-                <td>{row[0]}</td>
-                <td>{row[1]}</td>
-                <td>{row[2]}</td>
-                <td>{row[3]}</td>
-                <td>{row[4]}</td>
-                <td>{row[5]}</td>
-                <td>{row[6]}</td>
-            </tr>
-            """
-
-        html += "</tbody></table>"
-
-    html += """
-            </div>
-        </div>
-    </div>
-
-    </body>
-    </html>
-    """
-
+    html += "</table>"
     return html
 
 
