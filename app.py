@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect
 import pandas as pd
 import os
 import psycopg2
@@ -38,7 +38,7 @@ def create_table():
         );
     """)
 
-    # Benefits table (NEW STRUCTURE)
+    # Benefits table
     cur.execute("""
         CREATE TABLE IF NOT EXISTS benefits (
             id SERIAL PRIMARY KEY,
@@ -165,28 +165,71 @@ def check_benefit():
     )
 
 
-# ---------------- VIEW SUBMITTED ----------------
+# ---------------- VIEW SUBMITTED (DELETE ONLY) ----------------
 
 @app.route('/view_submitted')
 def view_submitted():
     conn = get_connection()
     cur = conn.cursor()
 
-    cur.execute("SELECT phone, card_code, benefit_code FROM submitted_data ORDER BY id DESC;")
+    cur.execute("""
+        SELECT id, phone, card_code, benefit_code
+        FROM submitted_data
+        ORDER BY id DESC;
+    """)
+
     rows = cur.fetchall()
 
     cur.close()
     conn.close()
 
     if not rows:
-        return "No data in database"
+        return "No submissions yet."
 
-    html = "<h2>Submitted Data</h2><table border='1'><tr><th>Phone</th><th>Card Code</th><th>Benefit Code</th></tr>"
+    html = """
+    <h2>Submitted Records</h2>
+    <table border='1' cellpadding='8'>
+    <tr>
+        <th>Phone</th>
+        <th>Card Code</th>
+        <th>Benefit Code</th>
+        <th>Delete</th>
+    </tr>
+    """
+
     for row in rows:
-        html += f"<tr><td>{row[0]}</td><td>{row[1]}</td><td>{row[2]}</td></tr>"
-    html += "</table>"
+        html += f"""
+        <tr>
+            <td>{row[1]}</td>
+            <td>{row[2]}</td>
+            <td>{row[3]}</td>
+            <td>
+                <a href="/delete/{row[0]}" 
+                   onclick="return confirm('Are you sure you want to delete this record?')">
+                   Delete
+                </a>
+            </td>
+        </tr>
+        """
 
+    html += "</table>"
     return html
+
+
+# ---------------- DELETE ROUTE ----------------
+
+@app.route('/delete/<int:id>')
+def delete_record(id):
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute("DELETE FROM submitted_data WHERE id = %s;", (id,))
+    conn.commit()
+
+    cur.close()
+    conn.close()
+
+    return redirect('/view_submitted')
 
 
 # ---------------- LOAD MASTER DATA ----------------
@@ -228,18 +271,10 @@ def load_master_data():
     conn.close()
 
     return "Master data loaded successfully!"
-@app.route('/drop_benefits')
-def drop_benefits():
-    conn = get_connection()
-    cur = conn.cursor()
 
-    cur.execute("DROP TABLE IF EXISTS benefits;")
 
-    conn.commit()
-    cur.close()
-    conn.close()
+# ---------------- VIEW BENEFITS ----------------
 
-    return "Benefits table dropped successfully!"
 @app.route('/view_benefits')
 def view_benefits():
     conn = get_connection()
@@ -265,9 +300,8 @@ def view_benefits():
     if not rows:
         return "No benefits found in database"
 
-    html = """
-    <h2>Benefits Master Data</h2>
-    <table border='1'>
+    html = "<h2>Benefits Master Data</h2><table border='1'>"
+    html += """
     <tr>
         <th>Benefit Code</th>
         <th>Vessel Type</th>
@@ -300,5 +334,3 @@ def view_benefits():
 
 if __name__ == '__main__':
     app.run()
-
-
