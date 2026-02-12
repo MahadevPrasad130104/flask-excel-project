@@ -27,7 +27,7 @@ def create_table():
         );
     """)
 
-    # Customer master table (KBF1JJ)
+    # Customer table
     cur.execute("""
         CREATE TABLE IF NOT EXISTS customers (
             id SERIAL PRIMARY KEY,
@@ -38,25 +38,23 @@ def create_table():
         );
     """)
 
-    # Benefit master table (KBF26BENEFITSCHEME)
-   # Benefit master table (KBF26BENEFITSCHEME)
-cur.execute("""
-    CREATE TABLE IF NOT EXISTS benefits (
-        id SERIAL PRIMARY KEY,
-        benefit_code VARCHAR(50) UNIQUE,
-        vessel_type VARCHAR(100),
-        vessel_description TEXT,
-        vessel_weight VARCHAR(50),
-        mutton VARCHAR(50),
-        chicken VARCHAR(50),
-        egg_dozen VARCHAR(50)
-    );
-""")
+    # Benefits table (NEW STRUCTURE)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS benefits (
+            id SERIAL PRIMARY KEY,
+            benefit_code VARCHAR(50) UNIQUE,
+            vessel_type VARCHAR(100),
+            vessel_description TEXT,
+            vessel_weight VARCHAR(50),
+            mutton VARCHAR(50),
+            chicken VARCHAR(50),
+            egg_dozen VARCHAR(50)
+        );
+    """)
 
-
-conn.commit()
-cur.close()
-conn.close()
+    conn.commit()
+    cur.close()
+    conn.close()
 
 
 create_table()
@@ -67,7 +65,9 @@ create_table()
 def home():
     return render_template('form1.html')
 
+
 # ---------------- CUSTOMER VERIFICATION ----------------
+
 @app.route('/check_customer', methods=['POST'])
 def check_customer():
     card_code = request.form['card_code'].strip()
@@ -96,10 +96,7 @@ def check_customer():
         "status": customer[3]
     }
 
-    return render_template(
-        'customer_details.html',
-        customer=customer_data
-    )
+    return render_template('customer_details.html', customer=customer_data)
 
 
 # ---------------- BENEFIT FORM ----------------
@@ -109,7 +106,8 @@ def benefit_form():
     card_code = request.form['card_code']
     return render_template('benefit_form.html', card_code=card_code)
 
-# ---------------- CHECK BENEFIT & SAVE TO DATABASE ----------------
+
+# ---------------- CHECK BENEFIT ----------------
 
 @app.route('/check_benefit', methods=['POST'])
 def check_benefit():
@@ -120,19 +118,17 @@ def check_benefit():
     conn = get_connection()
     cur = conn.cursor()
 
-    # Check if benefit exists
-  cur.execute("""
-    SELECT benefit_code,
-           vessel_type,
-           vessel_description,
-           vessel_weight,
-           mutton,
-           chicken,
-           egg_dozen
-    FROM benefits
-    WHERE benefit_code = %s
-""", (benefit_code,))
-
+    cur.execute("""
+        SELECT benefit_code,
+               vessel_type,
+               vessel_description,
+               vessel_weight,
+               mutton,
+               chicken,
+               egg_dozen
+        FROM benefits
+        WHERE benefit_code = %s
+    """, (benefit_code,))
 
     benefit = cur.fetchone()
 
@@ -151,16 +147,15 @@ def check_benefit():
     cur.close()
     conn.close()
 
-   benefit_data = {
-    "benefit code": benefit[0],
-    "vessel type": benefit[1],
-    "vessel description": benefit[2],
-    "vessel weight": benefit[3],
-    "mutton": benefit[4],
-    "chicken": benefit[5],
-    "egg (in dozen)": benefit[6]
-}
-
+    benefit_data = {
+        "benefit code": benefit[0],
+        "vessel type": benefit[1],
+        "vessel description": benefit[2],
+        "vessel weight": benefit[3],
+        "mutton": benefit[4],
+        "chicken": benefit[5],
+        "egg (in dozen)": benefit[6]
+    }
 
     return render_template(
         'benefit_details.html',
@@ -170,17 +165,7 @@ def check_benefit():
     )
 
 
-# ---------------- VIEW BENEFIT SCHEMES ----------------
-
-@app.route('/view_benefits')
-def view_benefits():
-    if not os.path.exists('KBF26BENEFITSCHEME.xlsx'):
-        return "<h3>Benefit scheme file not found</h3>"
-
-    df = pd.read_excel('KBF26BENEFITSCHEME.xlsx', engine='openpyxl')
-    return df.to_html(index=False)
-
-# ---------------- VIEW SUBMITTED DATA FROM DATABASE ----------------
+# ---------------- VIEW SUBMITTED ----------------
 
 @app.route('/view_submitted')
 def view_submitted():
@@ -203,84 +188,49 @@ def view_submitted():
 
     return html
 
-# ---------------- RUN ----------------
+
+# ---------------- LOAD MASTER DATA ----------------
+
 @app.route('/load_master_data')
 def load_master_data():
     conn = get_connection()
     cur = conn.cursor()
 
-    # Load customers from Excel
-    if os.path.exists('KBF1JJ.xlsx'):
-        df = pd.read_excel('KBF1JJ.xlsx', engine='openpyxl')
+    if os.path.exists('KBF26BENEFITSCHEME.xlsx'):
+        df = pd.read_excel('KBF26BENEFITSCHEME.xlsx', engine='openpyxl')
         df.columns = df.columns.str.strip().str.lower()
 
         for _, row in df.iterrows():
             cur.execute("""
-                INSERT INTO customers (card_code, name, amount_paid, status)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (card_code) DO NOTHING;
+                INSERT INTO benefits (
+                    benefit_code,
+                    vessel_type,
+                    vessel_description,
+                    vessel_weight,
+                    mutton,
+                    chicken,
+                    egg_dozen
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (benefit_code) DO NOTHING;
             """, (
-                str(row['card code']),
-                str(row['name']),
-                str(row['amount paid']),
-                str(row['status'])
+                str(row['benefit code']),
+                str(row.get('vessel type', '')),
+                str(row.get('vessel description', '')),
+                str(row.get('vessel weight', '')),
+                str(row.get('mutton', '')),
+                str(row.get('chicken', '')),
+                str(row.get('egg (in dozen)', ''))
             ))
-
-    # Load benefits from Excel
-    if os.path.exists('KBF26BENEFITSCHEME.xlsx'):
-        df2 = pd.read_excel('KBF26BENEFITSCHEME.xlsx', engine='openpyxl')
-        df2.columns = df2.columns.str.strip().str.lower()
-
-        for _, row in df2.iterrows():
-            cur.execute("""
-    INSERT INTO benefits (
-        benefit_code,
-        vessel_type,
-        vessel_description,
-        vessel_weight,
-        mutton,
-        chicken,
-        egg_dozen
-    )
-    VALUES (%s, %s, %s, %s, %s, %s, %s)
-    ON CONFLICT (benefit_code) DO NOTHING;
-""", (
-    str(row['benefit code']),
-    str(row.get('vessel type', '')),
-    str(row.get('vessel description', '')),
-    str(row.get('vessel weight', '')),
-    str(row.get('mutton', '')),
-    str(row.get('chicken', '')),
-    str(row.get('egg (in dozen)', ''))
-))
-
 
     conn.commit()
     cur.close()
     conn.close()
 
     return "Master data loaded successfully!"
-@app.route('/drop_benefits')
-def drop_benefits():
-    conn = get_connection()
-    cur = conn.cursor()
 
-    cur.execute("DROP TABLE IF EXISTS benefits;")
 
-    conn.commit()
-    cur.close()
-    conn.close()
-
-    return "Benefits table dropped successfully!"
+# ---------------- RUN ----------------
 
 if __name__ == '__main__':
     app.run()
-
-
-
-
-
-
-
-
-
