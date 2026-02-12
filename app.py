@@ -240,10 +240,65 @@ def drop_benefits():
     conn.close()
 
     return "Benefits table dropped successfully!"
+@app.route('/view_benefits')
+def view_benefits():
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT benefit_code,
+               vessel_type,
+               vessel_description,
+               vessel_weight,
+               mutton,
+               chicken,
+               egg_dozen
+        FROM benefits
+        ORDER BY id DESC;
+    """)
+
+    rows = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    if not rows:
+        return "No benefits found in database"
+
+    html = """
+    <h2>Benefits Master Data</h2>
+    <table border='1'>
+    <tr>
+        <th>Benefit Code</th>
+        <th>Vessel Type</th>
+        <th>Vessel Description</th>
+        <th>Vessel Weight</th>
+        <th>Mutton</th>
+        <th>Chicken</th>
+        <th>Egg (in dozen)</th>
+    </tr>
+    """
+
+    for row in rows:
+        html += f"""
+        <tr>
+            <td>{row[0]}</td>
+            <td>{row[1]}</td>
+            <td>{row[2]}</td>
+            <td>{row[3]}</td>
+            <td>{row[4]}</td>
+            <td>{row[5]}</td>
+            <td>{row[6]}</td>
+        </tr>
+        """
+
+    html += "</table>"
+    return html
 
 
 # ---------------- RUN ----------------
 
 if __name__ == '__main__':
     app.run()
+
 
