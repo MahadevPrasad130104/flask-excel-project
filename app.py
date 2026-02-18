@@ -185,6 +185,18 @@ def check_benefit():
         cur.close()
         conn.close()
         return "<h3 style='color:red'>Invalid Benefit Code</h3><a href='/'>Go Home</a>"
+    # Check if card already submitted
+    cur.execute("""
+        SELECT id FROM submitted_data
+        WHERE card_code = %s
+    """, (card_code,))
+
+    existing = cur.fetchone()
+
+    if existing:
+        cur.close()
+        conn.close()
+        return "<h3 style='color:red'>This card has already submitted once.</h3><a href='/'>Go Home</a>"
 
     cur.execute("""
         INSERT INTO submitted_data (phone, card_code, benefit_code)
@@ -488,6 +500,7 @@ def view_benefits():
 
 if __name__ == '__main__':
     app.run()
+
 
 
 
