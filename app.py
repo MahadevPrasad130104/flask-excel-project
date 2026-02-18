@@ -2,8 +2,12 @@ from flask import Flask, render_template, request, redirect
 import pandas as pd
 import os
 import psycopg2
+from flask import session
+
 
 app = Flask(__name__)
+app.secret_key = "my_super_secret_key_123"
+
 
 # ---------------- DATABASE CONNECTION ----------------
 
@@ -207,7 +211,49 @@ def check_benefit():
         card_code=card_code,
         benefit=benefit_data
     )
+@app.route('/admin-login', methods=['GET', 'POST'])
+def admin_login():
 
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+
+        # Change credentials if you want
+        if username == "admin" and password == "admin123":
+            session['admin'] = True
+            return redirect('/admin-dashboard')
+        else:
+            return render_template("admin_login.html", error="Invalid Credentials")
+
+    return render_template("admin_login.html")
+@app.route('/admin-logout')
+def admin_logout():
+    session.pop('admin', None)
+    return redirect('/admin-login')
+
+@app.route('/admin-dashboard')
+def admin_dashboard():
+
+    if not session.get('admin'):
+        return redirect('/admin-login')
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    # Benefit-wise count
+    cur.execute("""
+        SELECT benefit_code, COUNT(*)
+        FROM submitted_data
+        GROUP BY benefit_code
+        ORDER BY COUNT(*) DESC;
+    """)
+    benefit_report = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return render_template("admin_dashboard.html",
+                           benefit_report=benefit_report)
 
 # ---------------- VIEW SUBMITTED ----------------
 
@@ -426,3 +472,4 @@ def view_benefits():
 
 if __name__ == '__main__':
     app.run()
+
