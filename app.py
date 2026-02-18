@@ -28,7 +28,7 @@ def create_table():
         CREATE TABLE IF NOT EXISTS submitted_data (
             id SERIAL PRIMARY KEY,
             phone VARCHAR(20),
-            card_code VARCHAR(50),
+            card_code VARCHAR(50) UNIQUE,
             benefit_code VARCHAR(50)
         );
     """)
@@ -488,6 +488,7 @@ def view_benefits():
 
 if __name__ == '__main__':
     app.run()
+
 
 
 
