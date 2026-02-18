@@ -252,8 +252,14 @@ def admin_dashboard():
     cur.close()
     conn.close()
 
-    return render_template("admin_dashboard.html",
-                           benefit_report=benefit_report)
+    return render_template(
+    "admin_dashboard.html",
+    total_count=total_count,
+    total_benefits=total_benefits,
+    unique_benefits=unique_benefits,
+    benefit_data=benefit_data
+)
+
 
 # ---------------- VIEW SUBMITTED ----------------
 
@@ -472,4 +478,5 @@ def view_benefits():
 
 if __name__ == '__main__':
     app.run()
+
 
