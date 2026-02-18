@@ -234,31 +234,41 @@ def admin_logout():
 @app.route('/admin-dashboard')
 def admin_dashboard():
 
-    if not session.get('admin'):
-        return redirect('/admin-login')
-
     conn = get_connection()
     cur = conn.cursor()
 
-    # Benefit-wise count
+    # Total submissions
+    cur.execute("SELECT COUNT(*) FROM submitted_data;")
+    total_count = cur.fetchone()[0]
+
+    # Total benefits
+    cur.execute("SELECT COUNT(*) FROM benefits;")
+    total_benefits = cur.fetchone()[0]
+
+    # Unique benefit codes used
+    cur.execute("SELECT COUNT(DISTINCT benefit_code) FROM submitted_data;")
+    unique_benefits = cur.fetchone()[0]
+
+    # Benefit wise count
     cur.execute("""
         SELECT benefit_code, COUNT(*)
         FROM submitted_data
         GROUP BY benefit_code
         ORDER BY COUNT(*) DESC;
     """)
-    benefit_report = cur.fetchall()
+    benefit_data = cur.fetchall()
 
     cur.close()
     conn.close()
 
     return render_template(
-    "admin_dashboard.html",
-    total_count=total_count,
-    total_benefits=total_benefits,
-    unique_benefits=unique_benefits,
-    benefit_data=benefit_data
-)
+        "admin_dashboard.html",
+        total_count=total_count,
+        total_benefits=total_benefits,
+        unique_benefits=unique_benefits,
+        benefit_data=benefit_data
+    )
+
 
 
 # ---------------- VIEW SUBMITTED ----------------
@@ -478,5 +488,6 @@ def view_benefits():
 
 if __name__ == '__main__':
     app.run()
+
 
 
