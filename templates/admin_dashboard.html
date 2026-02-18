@@ -2,31 +2,101 @@
 <html>
 <head>
     <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .dashboard-cards {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            flex: 1;
+            padding: 20px;
+            border-radius: 8px;
+            color: white;
+            text-align: center;
+        }
+
+        .card h3 {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        .card p {
+            font-size: 28px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .card.blue { background: #1f4e79; }
+        .card.green { background: #28a745; }
+        .card.orange { background: #ff9800; }
+
+        .topbar {
+            background: #1f4e79;
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .topbar a {
+            color: white;
+            text-decoration: none;
+            font-size: 14px;
+        }
+    </style>
 </head>
 <body>
 
-<h2>Benefit Selection Report</h2>
+<div class="topbar">
+    <div>Benefit Management System — Admin</div>
+    <div><a href="/admin-logout">Logout</a></div>
+</div>
 
-<a href="/admin-logout">
-    <button>Logout</button>
-</a>
+<div class="container">
 
-<br><br>
+    <h2>Dashboard Overview</h2>
 
-<table border="1" cellpadding="10">
-    <tr>
-        <th>Benefit Code</th>
-        <th>Total Customers</th>
-    </tr>
+    <div class="dashboard-cards">
+        <div class="card blue">
+            <h3>Total Customers Opted</h3>
+            <p>{{ total_count }}</p>
+        </div>
 
-    {% for row in benefit_report %}
-    <tr>
-        <td>{{ row[0] }}</td>
-        <td>{{ row[1] }}</td>
-    </tr>
-    {% endfor %}
+        <div class="card green">
+            <h3>Total Benefit Schemes</h3>
+            <p>{{ total_benefits }}</p>
+        </div>
 
-</table>
+        <div class="card orange">
+            <h3>Unique Benefit Codes Used</h3>
+            <p>{{ unique_benefits }}</p>
+        </div>
+    </div>
+
+    <h2>Benefit Wise Count</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Benefit Code</th>
+                <th>Number of Customers</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in benefit_data %}
+            <tr>
+                <td>{{ row[0] }}</td>
+                <td>{{ row[1] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</div>
 
 </body>
 </html>
