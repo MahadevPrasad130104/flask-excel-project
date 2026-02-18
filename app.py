@@ -498,8 +498,8 @@ def view_benefits():
 
 # ---------------- RUN ----------------
 
-if __name__ == '__main__':
-    app.run()
+
+
 
 
 
