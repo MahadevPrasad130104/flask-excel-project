@@ -368,14 +368,18 @@ def delete_record(id):
     return redirect('/view_submitted')
 
 
-# ---------------- LOAD MASTER DATA ----------------
-
 @app.route('/load_master_data')
 def load_master_data():
     conn = get_connection()
     cur = conn.cursor()
 
-    # Load Customers
+    # CLEAR existing benefits data
+    cur.execute("DELETE FROM benefits;")
+
+    # CLEAR existing customers data (if needed)
+    cur.execute("DELETE FROM customers;")
+
+    # Load customers
     if os.path.exists('KBF1JJ.xlsx'):
         df = pd.read_excel('KBF1JJ.xlsx', engine='openpyxl')
         df.columns = df.columns.str.strip().str.lower()
@@ -384,15 +388,14 @@ def load_master_data():
             cur.execute("""
                 INSERT INTO customers (card_code, name, amount_paid, status)
                 VALUES (%s, %s, %s, %s)
-                ON CONFLICT (card_code) DO NOTHING;
             """, (
                 str(row['card code']),
                 str(row['name']),
-                int(row['amount paid']),
+                str(row['amount paid']),
                 str(row['status'])
             ))
 
-    # Load Benefits
+    # Load benefits
     if os.path.exists('KBF26BENEFITSCHEME.xlsx'):
         df2 = pd.read_excel('KBF26BENEFITSCHEME.xlsx', engine='openpyxl')
         df2.columns = df2.columns.str.strip().str.lower()
@@ -409,7 +412,6 @@ def load_master_data():
                     egg_dozen
                 )
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (benefit_code) DO NOTHING;
             """, (
                 str(row['benefit code']),
                 str(row.get('vessel type', '')),
@@ -424,7 +426,7 @@ def load_master_data():
     cur.close()
     conn.close()
 
-    return "Master data loaded successfully!"
+    return "Master data refreshed successfully!"
 
 
 # ---------------- DROP BENEFITS ----------------
@@ -497,6 +499,7 @@ def view_benefits():
 
 
 # ---------------- RUN ----------------
+
 
 
 
