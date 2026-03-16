@@ -3,7 +3,7 @@ import pandas as pd
 import os
 import psycopg2
 from flask import session
-
+import time
 
 app = Flask(__name__)
 app.secret_key = "my_super_secret_key_123"
@@ -13,7 +13,7 @@ app.secret_key = "my_super_secret_key_123"
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
-import time
+
 
 def get_connection():
     for i in range(3):   # try 3 times
