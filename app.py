@@ -13,8 +13,16 @@ app.secret_key = "my_super_secret_key_123"
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
+import time
+
 def get_connection():
-    return psycopg2.connect(DATABASE_URL, sslmode='require')
+    for i in range(3):   # try 3 times
+        try:
+            conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+            return conn
+        except:
+            time.sleep(2)  # wait 2 seconds and retry
+    raise Exception("Database connection failed")
 
 
 # ---------------- CREATE TABLES ----------------
